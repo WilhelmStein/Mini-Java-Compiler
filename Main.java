@@ -16,9 +16,9 @@ class Main {
 	    fis = new FileInputStream(args[0]);
 	    MiniJavaParser parser = new MiniJavaParser(fis);
 	    System.err.println("Program parsed successfully.");
-	    EvalVisitor eval = new EvalVisitor();
+	    MainVisitor startVis = new MainVisitor();
 	    Goal root = parser.Goal();
-	    System.out.println(root.accept(eval, null));
+	    System.out.println(root.accept(startVis, null));
 	}
 	catch(ParseException ex){
 	    System.out.println(ex.getMessage());
