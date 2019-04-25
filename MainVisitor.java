@@ -32,13 +32,14 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             return null;
 
         HashMap<String, String> vars = scopeToVars.get(startScope);
-        if (vars == null)
+        String varType = vars.get(varName);
+        if ( varType == null)
         {
             String parentScope = inheritanceChain.get(startScope);
             return findVarType(varName, parentScope);
         }
 
-        return vars.get(varName);
+        return varType;
     }
 
     private List<String> findMethodData(String methodName, String startScope) {
@@ -47,13 +48,14 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             return null;
 
         HashMap<String, List<String>> methods = classToMethods.get(startScope);
-        if( methods == null )
+        List<String> args = methods.get(methodName);
+        if( args == null )
         {
             String parentClass = inheritanceChain.get(startScope);
             return findMethodData(methodName, parentClass);
         }
         
-        return methods.get(methodName);
+        return args;
     }
 
     // Visit functions
@@ -100,7 +102,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String className = n.f1.accept(this, argu);
         
         if (scopeToVars.containsKey(className))
-            throw new Exception("Redefinition Error: Class " + className + " already exists.\n");
+            throw new Exception("Redefinition Error: Class " + className + " already exists.");
 
         classToMethods.put(className, new HashMap<String, List<String>>());
         scopeToVars.put(className, new HashMap<String, String>());
@@ -205,7 +207,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
         if (seekType != null) {
             throw new Exception("Redefinition Error: variable \"" + varName + "\" has already been defined as type "
-                    + seekType + ".\n");
+                    + seekType + ".");
         } else {
             currScope.put(varName, type);
         }
@@ -235,98 +237,20 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String methodType = n.f1.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
 
-        HashMap<String, List<String> > classMethods = classToMethods.get(argu);
-
-        if( classMethods.containsKey(methodName) )
-            throw new Exception("Error: Method " + methodName + " already defined.\n");
-
-        //n.f3.accept(this, argu);
-
-        List<String> methodData = findMethodData(methodName, argu);
-
-        if( n.f4.present() )
-        {
-            n.f4.accept(this, argu);
-
-            if(methodData == null)
-            {
-                methodData = new ArrayList<String>(argList);
-                methodData.add(0, methodType);
-                classMethods.put(methodName, methodData);
-            }
-            else if(methodType != methodData.get(0) || !methodData.subList(1, methodData.size()).equals(argList))
-                throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName + "\n");
-
-            argList.clear();
-        }
-        else
-        {
-            if(methodData == null)
-            {
-                methodData = new ArrayList<String>();
-                methodData.add(0, methodType);
-                classMethods.put(methodName, methodData);
-            }
-            else if(methodType != methodData.get(0) )
-                throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName + "\n");
-        }
-
-        //n.f5.accept(this, argu);
-        //n.f6.accept(this, argu);
         String currScope = argu + "." + methodName;
-        scopeToVars.put(currScope, new HashMap<String, String>());
-        n.f7.accept(this, currScope);
-        n.f8.accept(this, currScope);
+        
+        if( n.f7.present() )
+            n.f7.accept(this, currScope);
+
+        if( n.f8.present() )
+            n.f8.accept(this, currScope);
+
         //n.f9.accept(this, argu);
-        String returnExprType = n.f10.accept(this, argu);
+        String returnExprType = n.f10.accept(this, currScope);
         if( returnExprType != methodType )
-            throw new Exception("Error: Cannot return value of type " + returnExprType + " when expecting type " +  methodType + ".\n");
+            throw new Exception("Error: Cannot return value of type " + returnExprType + " when expecting type " +  methodType + ".");
         //n.f11.accept(this, argu);
         //n.f12.accept(this, argu);
-        return _ret;
-    }
-
-    /**
-     * f0 -> FormalParameter()
-     * f1 -> FormalParameterTail()
-     */
-    @Override
-    public String visit(FormalParameterList n, String argu) throws Exception {
-        String _ret = null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        return _ret;
-    }
-
-    /**
-     * f0 -> Type()
-     * f1 -> Identifier()
-     */
-    @Override
-    public String visit(FormalParameter n, String argu) throws Exception {
-        String _ret = null;
-        argList.add(n.f0.accept(this, argu));
-        //n.f1.accept(this, argu);
-        return _ret;
-    }
-
-    /**
-     * f0 -> ( FormalParameterTerm() )*
-     */
-    @Override
-    public String visit(FormalParameterTail n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
-    }
-
-    /**
-     * f0 -> ","
-     * f1 -> FormalParameter()
-     */
-    @Override
-    public String visit(FormalParameterTerm n, String argu) throws Exception {
-        String _ret = null;
-        n.f0.accept(this, argu);
-        argList.add(n.f1.accept(this, argu));
         return _ret;
     }
 
@@ -356,7 +280,8 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(BooleanType n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
+        //return n.f0.accept(this, argu);
+        return "boolean";
     }
 
     /**
@@ -364,7 +289,8 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(IntegerType n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
+        //return n.f0.accept(this, argu);
+        return "int";
     }
 
     /**
@@ -409,7 +335,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String exprType = n.f2.accept(this, argu);
         if (exprType != soughtVarType)
             throw new Exception("Error: Cannot assign value of type " + exprType + " to variable  " + varName
-                    + " of type " + soughtVarType + ".\n");
+                    + " of type " + soughtVarType + ".");
         // n.f3.accept(this, argu);
         return _ret;
     }
@@ -435,14 +361,14 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // n.f1.accept(this, argu);
         String indexExprType = n.f2.accept(this, argu);
         if (indexExprType != "int")
-            throw new Exception("Error: Array index must be of integer type.\n");
+            throw new Exception("Error: Array index must be of integer type.");
 
         // n.f3.accept(this, argu);
         // n.f4.accept(this, argu);
         String assignmentExprType = n.f5.accept(this, argu);
-        if (assignmentExprType != soughtVarType)
+        if (assignmentExprType != "int" || soughtVarType != "array")
             throw new Exception("Error: Cannot assign value of type " + assignmentExprType + " to array variable  "
-                    + varName + " of type " + soughtVarType + ".\n");
+                    + varName + " of type " + soughtVarType + ".");
         // n.f6.accept(this, argu);
         return _ret;
     }
@@ -463,7 +389,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // n.f1.accept(this, argu);
         String condExprType = n.f2.accept(this, argu);
         if (condExprType != "boolean")
-            throw new Exception("Error: Condition value must be of boolean type.\n");
+            throw new Exception("Error: Condition value must be of boolean type.");
         // n.f3.accept(this, argu);
         n.f4.accept(this, argu);
         // n.f5.accept(this, argu);
@@ -485,7 +411,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // n.f1.accept(this, argu);
         String condExprType = n.f2.accept(this, argu);
         if (condExprType != "boolean")
-            throw new Exception("Error: Condition value must be of boolean type.\n");
+            throw new Exception("Error: Condition value must be of boolean type.");
         // n.f3.accept(this, argu);
         n.f4.accept(this, argu);
         return _ret;
@@ -530,7 +456,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // n.f1.accept(this, argu);
         String clause2 = n.f2.accept(this, argu);
         if (clause1 != "boolean" || clause2 != "boolean")
-            throw new Exception("Error: && operator supports only arguments of type boolean.\n");
+            throw new Exception("Error: && operator supports only arguments of type boolean.");
 
         return "boolean";
     }
@@ -547,7 +473,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String expr2 = n.f2.accept(this, argu);
 
         if (expr1 != "int" || expr2 != "int")
-            throw new Exception("Error: < operator supports only arguments of type integer.\n");
+            throw new Exception("Error: < operator supports only arguments of type integer.");
 
         return "boolean";
     }
@@ -564,7 +490,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String expr2 = n.f2.accept(this, argu);
 
         if (expr1 != "int" || expr2 != "int")
-            throw new Exception("Error: + operator supports only arguments of type integer.\n");
+            throw new Exception("Error: + operator supports only arguments of type integer.");
         return "int";
     }
 
@@ -580,7 +506,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String expr2 = n.f2.accept(this, argu);
 
         if (expr1 != "int" || expr2 != "int")
-            throw new Exception("Error: - operator supports only arguments of type integer.\n");
+            throw new Exception("Error: - operator supports only arguments of type integer.");
         return "int";
     }
 
@@ -597,7 +523,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String expr2 = n.f2.accept(this, argu);
 
         if (expr1 != "int" || expr2 != "int")
-            throw new Exception("Error: * operator supports only arguments of type integer.\n");
+            throw new Exception("Error: * operator supports only arguments of type integer.");
         return "int";
     }
 
@@ -616,7 +542,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         //n.f1.accept(this, argu);
         String indexExpr = n.f2.accept(this, argu);
         if( indexExpr != "int")
-            throw new Exception("Error: Array index must be of integer type.\n");
+            throw new Exception("Error: Array index must be of integer type.");
         //n.f3.accept(this, argu);
         return "int";
     }
@@ -630,7 +556,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     public String visit(ArrayLength n, String argu) throws Exception {
         String varType = n.f0.accept(this, argu);
         if( varType != "array" )
-            throw new Exception("Error: .length operator can only be used on an array variable.\n");
+            throw new Exception("Error: .length operator can only be used on an array variable.");
         //n.f1.accept(this, argu);
         //n.f2.accept(this, argu);
         return "int";
@@ -651,13 +577,16 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String methodName = n.f2.accept(this, argu);
         List<String> methodData = findMethodData(methodName, classType);
         //n.f3.accept(this, argu);
+
+        if(methodData == null)
+            throw new Exception("Error: Method " + methodName + " not defined in class " + classType + " or any of it's superclasses.");
         
         if( n.f4.present() )
         {
             n.f4.accept(this, argu);
 
             if( !methodData.subList(1, methodData.size()).equals(argList) )
-                throw new Exception("Error: Argument list not as expected.\n");
+                throw new Exception("Error: Argument list not as expected.");
 
             argList.clear();
         }
@@ -713,6 +642,17 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(PrimaryExpression n, String argu) throws Exception {
+        if( n.f0.which == 3 )
+        {
+            String varName = n.f0.accept(this, argu);
+            String varType = findVarType(varName, argu);
+
+            if(varType == null)
+                throw new Exception("Error: Identifier " + varName + " not found.");
+
+            return varType;
+        }
+
         return n.f0.accept(this, argu);
     }
 
@@ -756,7 +696,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ThisExpression n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
+        return argu.split("\\.", 2)[0];
     }
 
     /**
@@ -773,7 +713,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         //n.f2.accept(this, argu);
         String countExpr = n.f3.accept(this, argu);
         if( countExpr != "int" )
-            throw new Exception("Error: Array index must be of integer type.\n");
+            throw new Exception("Error: Array index must be of integer type.");
         //n.f4.accept(this, argu);
         return "array";
     }
@@ -789,7 +729,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         //n.f0.accept(this, argu);
         String className = n.f1.accept(this, argu);
         if(!classToMethods.containsKey(className) )
-            throw new Exception("Error: Class " + className + " has not been defined.\n");
+            throw new Exception("Error: Class " + className + " has not been defined.");
         //n.f2.accept(this, argu);
         //n.f3.accept(this, argu);
         return className;
@@ -803,7 +743,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     public String visit(NotExpression n, String argu) throws Exception {
         //n.f0.accept(this, argu);
         if(n.f1.accept(this, argu) != "boolean")
-            throw new Exception("Error: ! operator requires a boolean type argument.\n");
+            throw new Exception("Error: ! operator requires a boolean type argument.");
         
         return "boolean";
     }
