@@ -98,7 +98,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String _ret = null;
         // n.f0.accept(this, argu);
         String className = n.f1.accept(this, argu);
-
+        
         if (scopeToVars.containsKey(className))
             throw new Exception("Redefinition Error: Class " + className + " already exists.\n");
 
@@ -748,7 +748,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(Identifier n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
+        return n.f0.toString();
     }
 
     /**
@@ -801,10 +801,11 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(NotExpression n, String argu) throws Exception {
-        String _ret = null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        return _ret;
+        //n.f0.accept(this, argu);
+        if(n.f1.accept(this, argu) != "boolean")
+            throw new Exception("Error: ! operator requires a boolean type argument.\n");
+        
+        return "boolean";
     }
 
     /**

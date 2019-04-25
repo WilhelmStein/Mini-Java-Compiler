@@ -22,21 +22,21 @@ class Main {
 			try{
 				fis = new FileInputStream(args[i]);
 				MiniJavaParser parser = new MiniJavaParser(fis);
-				System.err.println("Program parsed successfully.");
 				MainVisitor mainVis = new MainVisitor(classToMethods, scopeToVars, inheritanceChain);
 				ClassDefVisitor classDefVis = new ClassDefVisitor(classToMethods, scopeToVars, inheritanceChain);
 				Goal root = parser.Goal();
 				root.accept(classDefVis, null);
 				root.accept(mainVis, null);
+				System.out.println(args[i] + " was parsed successfully.");
 			}
 			catch(Exception ex) {
 				System.out.println(ex.getMessage());
+				System.exit(-1);
 			}
 			finally{
 				try{
 					if(fis != null)
 					{
-						System.out.println(args[i] + " was parsed successfully.");
 						fis.close();
 					}
 				}

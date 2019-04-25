@@ -92,4 +92,12 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
 
         return _ret;
     }
+
+    /**
+     * f0 -> <IDENTIFIER>
+     */
+    @Override
+    public String visit(Identifier n, String argu) throws Exception {
+        return n.f0.toString();
+    }
 }
