@@ -50,13 +50,14 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
             return null;
 
         HashMap<String, List<String>> methods = classToMethods.get(startScope);
-        if( methods == null )
+        List<String> args = methods.get(methodName);
+        if( args == null )
         {
             String parentClass = inheritanceChain.get(startScope);
             return findMethodData(methodName, parentClass);
         }
         
-        return methods.get(methodName);
+        return args;
     }
 
     // Visit functions
@@ -163,7 +164,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         HashMap<String, List<String> > classMethods = classToMethods.get(argu);
 
         if( classMethods.containsKey(methodName) )
-            throw new Exception("Error: Method " + methodName + " already defined.");
+            throw new Exception("Redefinition Error: Method " + argu + "::" + methodName + " already defined.");
 
         //n.f3.accept(this, argu);
 
@@ -202,7 +203,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
             
         }
 
-        String currScope = argu + "." + methodName;
+        String currScope = argu + "::" + methodName;
         scopeToVars.put(currScope, argumentsToTypes);
         inheritanceChain.put(currScope, argu);
         
@@ -247,7 +248,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
     @Override
     public String visit(FormalParameterTerm n, String argu) throws Exception {
         String _ret = null;
-        n.f0.accept(this, argu);
+        n.f1.accept(this, argu);
         return _ret;
     }
 
