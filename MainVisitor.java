@@ -11,16 +11,26 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     HashMap<String, HashMap<String, String>> scopeToVars;
     HashMap<String, String> inheritanceChain;
 
+    private HashMap<String, Integer> classToVarOffset;
+    private HashMap<String, Integer> classToMethodOffset; 
+    HashMap<String, OffsetMaps> classToOffsetMap;
+
     private List<String> argList;
 
     public MainVisitor( HashMap<String, HashMap<String, List<String>>> classToMethods,
                         HashMap<String, HashMap<String, String>> scopeToVars,
-                        HashMap<String, String> inheritanceChain ) throws Exception 
+                        HashMap<String, String> inheritanceChain,
+                        HashMap<String, OffsetMaps> classToOffsetMap ) throws Exception 
     {
         super();
         this.classToMethods = classToMethods;
         this.scopeToVars = scopeToVars;
         this.inheritanceChain = inheritanceChain;
+
+        this.classToVarOffset = new HashMap<String, Integer>();
+        this.classToMethodOffset = new HashMap<String, Integer>();
+        this.classToOffsetMap = classToOffsetMap;
+
         this.argList = new ArrayList<String>();
     }
 
@@ -71,6 +81,19 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             return true;
         else
             return isAncestorOf(parent, ancestorClass);
+    }
+
+    private boolean overrides(String methodName, String className) {
+
+        String parentClass = inheritanceChain.get(className);
+
+        if(parentClass == null)
+            return false;
+
+        if(classToMethods.get(parentClass).containsKey(methodName))
+            return true;
+        else
+            return overrides(methodName, parentClass);
     }
 
     // Visit functions
@@ -171,6 +194,11 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String _ret = null;
         //n.f0.accept(this, argu);
         String className = n.f1.accept(this, argu);
+
+        classToVarOffset.put(className, 0);
+        classToMethodOffset.put(className, 0);
+        classToOffsetMap.put(className, new OffsetMaps());
+
         //n.f2.accept(this, argu);
         if( n.f3.present() )
             n.f3.accept(this, className);
@@ -196,7 +224,17 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String _ret = null;
         //n.f0.accept(this, argu);
         String className = n.f1.accept(this, argu);
+        String parentClass = n.f3.accept(this, argu);
+
+        int parentClassVarOffset = classToVarOffset.get(parentClass);
+        int parentClassMethodOffset = classToMethodOffset.get(parentClass);
+
         //n.f2.accept(this, argu);
+
+        classToVarOffset.put(className, parentClassVarOffset);
+        classToMethodOffset.put(className, parentClassMethodOffset);
+        classToOffsetMap.put(className, new OffsetMaps());
+
         //n.f4.accept(this, argu);
         if( n.f5.present() )
             n.f5.accept(this, className);
@@ -225,6 +263,32 @@ public class MainVisitor extends GJDepthFirst<String, String> {
                     + seekType + ".");
         } else {
             currScope.put(varName, type);
+
+            if(!argu.contains("::"))
+            {
+                String currClass = argu;
+
+                
+                    int currVarOffset = classToVarOffset.get(currClass);
+
+                    classToOffsetMap.get(currClass).variableOffsets.put(varName, currVarOffset);
+                    
+                    switch(type)
+                    {
+
+                        case "int": 
+                            classToVarOffset.replace(currClass, currVarOffset + 4);
+                            break;
+
+                        case "boolean": 
+                            classToVarOffset.replace(currClass, currVarOffset + 1);
+                            break;
+
+                        default: 
+                            classToVarOffset.replace(currClass, currVarOffset + 8);
+                            break;
+                    }
+            }
         }
         // n.f2.accept(this, argu);
         return _ret;
@@ -266,6 +330,15 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             throw new Exception("Scope: " + currScope + "\n\tError: Cannot return value of type " + returnExprType + " when expecting type " +  methodType + ".");
         //n.f11.accept(this, argu);
         //n.f12.accept(this, argu);
+
+
+        if( !overrides(methodName, argu) )
+        {
+            int currMethodOffset = classToMethodOffset.get(argu);
+            classToMethodOffset.replace(argu, currMethodOffset + 8);
+            classToOffsetMap.get(argu).methodOffsets.put(methodName, currMethodOffset);
+        }
+
         return _ret;
     }
 
@@ -718,7 +791,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ThisExpression n, String argu) throws Exception {
-        return argu.split("\\::", 2)[0];
+        return argu.split("::", 2)[0];
     }
 
     /**

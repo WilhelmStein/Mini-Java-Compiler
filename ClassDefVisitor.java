@@ -29,16 +29,18 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
     HashMap<String, HashMap<String, List<String>>> classToMethods;
     HashMap<String, HashMap<String, String>> scopeToVars;
     HashMap<String, String> inheritanceChain;
+
     private List<Argument> argList;
 
     ClassDefVisitor(HashMap<String, HashMap<String, List<String>>> classToMethods,
-    HashMap<String, HashMap<String, String>> scopeToVars,
-    HashMap<String, String> inheritanceChain ) throws Exception 
+                    HashMap<String, HashMap<String, String>> scopeToVars,
+                    HashMap<String, String> inheritanceChain ) throws Exception 
     {
         super();
         this.classToMethods = classToMethods;
         this.scopeToVars = scopeToVars;
         this.inheritanceChain = inheritanceChain;
+
         this.argList = new ArrayList<Argument>();
     }
 
