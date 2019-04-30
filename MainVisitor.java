@@ -35,6 +35,9 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         this.classToMethodOffset = new HashMap<String, Integer>();
         this.classToOffsetMap = classToOffsetMap;
 
+        this.currMethodOffset = 0;
+        this.currVarOffset = 0;
+
         this.argList = new ArrayList<String>();
     }
 
