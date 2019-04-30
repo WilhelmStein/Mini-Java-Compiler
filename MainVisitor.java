@@ -254,6 +254,10 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     public String visit(VarDeclaration n, String argu) throws Exception {
         String _ret = null;
         String type = n.f0.accept(this, argu);
+
+        if( type != "int" && type != "array" && type != "boolean" && classToMethods.get(type) == null )
+            throw new Exception("Scope: " + argu + "\n\tError: Class " + type + " has not been defined.");
+
         String varName = n.f1.accept(this, argu);
         HashMap<String, String> currScope = scopeToVars.get(argu);
         String seekType = currScope.get(varName);
@@ -421,7 +425,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
         // n.f1.accept(this, argu);
         String exprType = n.f2.accept(this, argu);
-        if (!exprType.equals(soughtVarType))
+        if (!isAncestorOf(exprType, soughtVarType))
             throw new Exception("Scope: " + argu + "\n\tError: Cannot assign value of type " + exprType + " to variable  " + varName
                     + " of type " + soughtVarType + ".");
         // n.f3.accept(this, argu);
@@ -518,7 +522,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // n.f0.accept(this, argu);
         // n.f1.accept(this, argu);
         String exprType = n.f2.accept(this, argu);
-        if( exprType != "array" && exprType != "int" && exprType != "boolean")
+        if( exprType != "int" && exprType != "boolean" )
             throw new Exception("Scope: " + argu + "\n\tError: Print statement can only have variables of primitive type as arguments.");
         // n.f3.accept(this, argu);
         // n.f4.accept(this, argu);
