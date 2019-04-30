@@ -13,6 +13,10 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
     private HashMap<String, Integer> classToVarOffset;
     private HashMap<String, Integer> classToMethodOffset; 
+
+    private Integer currVarOffset;
+    private Integer currMethodOffset;
+
     HashMap<String, OffsetMaps> classToOffsetMap;
 
     private List<String> argList;
@@ -160,8 +164,10 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String className = n.f1.accept(this, argu);
 
         // Init class offset
-        classToVarOffset.put(className, 0);
-        classToMethodOffset.put(className, 0);
+        
+        currVarOffset = 0;
+        currMethodOffset = 0;
+
         classToOffsetMap.put(className, new OffsetMaps());
 
         if( n.f3.present() )
@@ -169,6 +175,9 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
         if( n.f4.present() )
             n.f4.accept(this, className);
+
+        classToVarOffset.put(className, currVarOffset);
+        classToMethodOffset.put(className, currMethodOffset);
 
         return null;
     }
@@ -188,12 +197,9 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String className = n.f1.accept(this, argu);
         String parentClass = n.f3.accept(this, argu);
 
-        int parentClassVarOffset = classToVarOffset.get(parentClass);
-        int parentClassMethodOffset = classToMethodOffset.get(parentClass);
+        int currVarOffset = classToVarOffset.get(parentClass);
+        int currMethodOffset = classToMethodOffset.get(parentClass);
 
-        // Init class offset, keeping in mind the parent offset
-        classToVarOffset.put(className, parentClassVarOffset);
-        classToMethodOffset.put(className, parentClassMethodOffset);
         classToOffsetMap.put(className, new OffsetMaps());
 
         if( n.f5.present() )
@@ -201,6 +207,10 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
         if( n.f6.present() )    
             n.f6.accept(this, className);
+
+        // Init class offset, keeping in mind the parent offset
+        classToVarOffset.put(className, currVarOffset);
+        classToMethodOffset.put(className, currMethodOffset);
 
         return null;
     }
@@ -233,26 +243,16 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             {
                 String currClass = argu;
 
+                classToOffsetMap.get(currClass).variableOffsets.put(varName, currVarOffset);
                 
-                    int currVarOffset = classToVarOffset.get(currClass);
+                switch(type)
+                {
+                    case "int": currVarOffset += 4; break;
 
-                    classToOffsetMap.get(currClass).variableOffsets.put(varName, currVarOffset);
-                    
-                    switch(type)
-                    {
+                    case "boolean": currVarOffset += 1; break;
 
-                        case "int": 
-                            classToVarOffset.replace(currClass, currVarOffset + 4);
-                            break;
-
-                        case "boolean": 
-                            classToVarOffset.replace(currClass, currVarOffset + 1);
-                            break;
-
-                        default: 
-                            classToVarOffset.replace(currClass, currVarOffset + 8);
-                            break;
-                    }
+                    default: currVarOffset += 8; break;
+                }
             }
         }
 
@@ -296,9 +296,8 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // Check if the method declared will override another method in order to calculate the offsets correctly
         if( !overrides(methodName, argu) )
         {
-            int currMethodOffset = classToMethodOffset.get(argu);
-            classToMethodOffset.replace(argu, currMethodOffset + 8);
             classToOffsetMap.get(argu).methodOffsets.put(methodName, currMethodOffset);
+            currMethodOffset += 8;
         }
 
         return null;
