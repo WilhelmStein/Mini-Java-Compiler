@@ -69,14 +69,13 @@ class Main {
 
 						System.out.println("-----------Class " + offsetMap.getKey() + "-----------");
 
-						System.out.println("--Variables--");
+						System.out.println("--Variables---");
 						if(!offsetMap.getValue().variableOffsets.isEmpty())
 						{
 							List<Entry<String, Integer>> sorted = sortByValues(offsetMap.getValue().variableOffsets);
 							for(Entry<String, Integer> entry : sorted) {
 								System.out.println(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue());
 							}
-							System.out.println();
 						}
 
 						System.out.println("---Methods---");
