@@ -64,37 +64,32 @@ class Main {
 					Goal root = parser.Goal();
 					root.accept(classDefVis, null);
 					root.accept(mainVis, null);
-					System.out.println("\tFile parsed successfully.\n\tOffsets:");
 
 					for (Entry<String, OffsetMaps> offsetMap : classToOffsetMap.entrySet()) {
 
-						boolean classHasContents = false;
-						System.out.println("\t\tClass " + offsetMap.getKey() + ":");
+						System.out.println("-----------Class " + offsetMap.getKey() + "-----------");
 
+						System.out.println("--Variables--");
 						if(!offsetMap.getValue().variableOffsets.isEmpty())
 						{
-							classHasContents = true;
-							System.out.println("\t\t\tVariables:");
 							List<Entry<String, Integer>> sorted = sortByValues(offsetMap.getValue().variableOffsets);
 							for(Entry<String, Integer> entry : sorted) {
-								System.out.println("\t\t\t\t" + entry.getKey() + " : " + entry.getValue());
+								System.out.println(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue());
 							}
 							System.out.println();
 						}
 
+						System.out.println("---Methods---");
 						if(!offsetMap.getValue().methodOffsets.isEmpty())
 						{
-							classHasContents = true;
-							System.out.println("\t\t\tMethods:");
+							
 							List<Entry<String, Integer>> sorted = sortByValues(offsetMap.getValue().methodOffsets);
 							for(Entry<String, Integer> entry : sorted) {
-								System.out.println("\t\t\t\t" + entry.getKey() + " : " + entry.getValue());
+								System.out.println(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue());
 							}
 							System.out.println();
 						}
 
-						if(!classHasContents)
-							System.out.println("\t\t\tNone");
 					}
 					
 					System.out.println("\n");
