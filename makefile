@@ -6,4 +6,4 @@ compile:
 	javac Main.java MainVisitor.java ClassDefVisitor.java
 
 clean:
-	rm -f *.class *~
+	rm -f *.class *~ ./tests/offsets/*.offset

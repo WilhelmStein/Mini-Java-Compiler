@@ -71,12 +71,48 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(Goal n, String argu) throws Exception {
-        String _ret = null;
-        // n.f0.accept(this, argu);
+        n.f0.accept(this, argu);
         if( n.f1.present() )
             n.f1.accept(this, argu);
-        // n.f2.accept(this, argu);
-        return _ret;
+
+        return null;
+    }
+
+    /**
+     * f0 -> "class"
+     * f1 -> Identifier()
+     * f2 -> "{"
+     * f3 -> "public"
+     * f4 -> "static"
+     * f5 -> "void"
+     * f6 -> "main"
+     * f7 -> "("
+     * f8 -> "String"
+     * f9 -> "["
+     * f10 -> "]"
+     * f11 -> Identifier()
+     * f12 -> ")" 
+     * f13 -> "{" 
+     * f14 -> ( VarDeclaration() )* 
+     * f15 -> ( Statement() )*
+     * f16 -> "}"
+     * f17 -> "}"
+     */
+    @Override
+    public String visit(MainClass n, String argu) throws Exception {
+        String className = n.f1.accept(this, argu);
+        
+        if (scopeToVars.containsKey(className)) // Check if class has already been defined.
+            throw new Exception("Redefinition Error: Class " + className + " already exists.");
+
+        classToMethods.put(className, new HashMap<String, List<String>>());
+        scopeToVars.put(className, new HashMap<String, String>());
+
+        classToMethods.put(className + "::main", new HashMap<String, List<String>>());
+        scopeToVars.put(className + "::main", new HashMap<String, String>());
+        inheritanceChain.put(className + "::main", className);
+
+        return null;
     }
 
     /**
@@ -89,22 +125,18 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ClassDeclaration n, String argu) throws Exception {
-        String _ret = null;
-        //n.f0.accept(this, argu);
         String className = n.f1.accept(this, argu);
 
         if (scopeToVars.containsKey(className))
             throw new Exception("Redefinition Error: Class " + className + " already exists.");
-        else 
-        {
-            classToMethods.put(className, new HashMap<String, List<String>>());
-            scopeToVars.put(className, new HashMap<String, String>());
-        }
+        
+        classToMethods.put(className, new HashMap<String, List<String>>());
+        scopeToVars.put(className, new HashMap<String, String>());
 
         if( n.f4.present() )
             n.f4.accept(this, className);
 
-        return _ret;
+        return null;
     }
 
     /**
@@ -119,7 +151,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ClassExtendsDeclaration n, String argu) throws Exception {
-        String _ret = null;
         String className = n.f1.accept(this, argu);
 
         if (scopeToVars.containsKey(className))
@@ -138,7 +169,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         if( n.f6.present() )
             n.f6.accept(this, className);
 
-        return _ret;
+        return null;
     }
 
     /**
@@ -158,8 +189,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(MethodDeclaration n, String argu) throws Exception {
-        String _ret = null;
-        //n.f0.accept(this, argu);
         String methodType = n.f1.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
 
@@ -167,8 +196,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
 
         if( classMethods.containsKey(methodName) )
             throw new Exception("Redefinition Error: Method " + argu + "::" + methodName + " already defined.");
-
-        //n.f3.accept(this, argu);
 
         List<String> methodData = findMethodData(methodName, argu);
 
@@ -209,19 +236,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         scopeToVars.put(currScope, argumentsToTypes);
         inheritanceChain.put(currScope, argu);
         
-        return _ret;
-    }
-
-    /**
-     * f0 -> FormalParameter()
-     * f1 -> FormalParameterTail()
-     */
-    @Override
-    public String visit(FormalParameterList n, String argu) throws Exception {
-        String _ret = null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        return _ret;
+        return null;
     }
 
     /**
@@ -230,30 +245,9 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(FormalParameter n, String argu) throws Exception {
-        String _ret = null;
         argList.add(new Argument(n.f1.accept(this, argu), n.f0.accept(this, argu)));
-        return _ret;
+        return null;
     }
-
-    /**
-     * f0 -> ( FormalParameterTerm() )*
-     */
-    @Override
-    public String visit(FormalParameterTail n, String argu) throws Exception {
-        return n.f0.accept(this, argu);
-    }
-
-    /**
-     * f0 -> ","
-     * f1 -> FormalParameter()
-     */
-    @Override
-    public String visit(FormalParameterTerm n, String argu) throws Exception {
-        String _ret = null;
-        n.f1.accept(this, argu);
-        return _ret;
-    }
-
 
     /**
      * f0 -> <IDENTIFIER>
@@ -270,9 +264,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ArrayType n, String argu) throws Exception {
-        // n.f0.accept(this, argu);
-        // n.f1.accept(this, argu);
-        // n.f2.accept(this, argu);
         return "array";
     }
 
@@ -281,7 +272,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(BooleanType n, String argu) throws Exception {
-        //return n.f0.accept(this, argu);
         return "boolean";
     }
 
@@ -290,7 +280,6 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(IntegerType n, String argu) throws Exception {
-        //return n.f0.accept(this, argu);
         return "int";
     }
 }

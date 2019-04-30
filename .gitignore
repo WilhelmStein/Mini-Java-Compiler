@@ -8,4 +8,4 @@
 !MainVisitor.java
 !Main.java
 !ClassDefVisitor.java
-!tests
+!buildAndTest.sh
