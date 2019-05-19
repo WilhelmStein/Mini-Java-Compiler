@@ -8,13 +8,13 @@ import java.util.List;
 
 class OffsetMaps { // Essentially a Pair class
 
-	public HashMap<String,Integer> variableOffsets;
-	public HashMap<String,Integer> methodOffsets;
+	public Map<String,Integer> variableOffsets;
+	public Map<String,Integer> methodOffsets;
 
 	OffsetMaps()
 	{
-		this.variableOffsets = new HashMap<String,Integer>();
-		this.methodOffsets = new HashMap<String,Integer>();
+		this.variableOffsets = new LinkedHashMap<String,Integer>();
+		this.methodOffsets = new LinkedHashMap<String,Integer>();
 	}
 }
 
@@ -45,9 +45,9 @@ class Main {
 		
 		for(int i = j; i < args.length; i++ ) {
 
-			HashMap<String, HashMap<String, List<String>>> classToMethods = new HashMap<String, HashMap<String, List<String>>>();
-			HashMap<String, HashMap<String, String>> scopeToVars = new HashMap<String, HashMap<String, String>>();
-			HashMap<String, String> inheritanceChain = new HashMap<String, String>();
+			Map<String, Map<String, List<String>>> classToMethods = new HashMap<String, Map<String, List<String>>>();
+			Map<String, Map<String, String>> scopeToVars = new HashMap<String, Map<String, String>>();
+			Map<String, String> inheritanceChain = new HashMap<String, String>();
 
 			Map<String, OffsetMaps> classToOffsetMap = new LinkedHashMap<String, OffsetMaps>();
 
@@ -61,10 +61,11 @@ class Main {
 				MiniJavaParser parser = new MiniJavaParser(fis);
 				MainVisitor mainVis = new MainVisitor(classToMethods, scopeToVars, inheritanceChain, classToOffsetMap);
 				ClassDefVisitor classDefVis = new ClassDefVisitor(classToMethods, scopeToVars, inheritanceChain);
-				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", classToOffsetMap);
 				Goal root = parser.Goal();
 				root.accept(classDefVis, null);
 				root.accept(mainVis, null);
+
+				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
 				root.accept(intermediateCodeVis, null);
 				
 				//System.out.println("\n");

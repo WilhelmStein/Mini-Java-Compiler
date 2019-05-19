@@ -8,9 +8,9 @@ import visitor.GJDepthFirst;
 
 public class MainVisitor extends GJDepthFirst<String, String> {
 
-    HashMap<String, HashMap<String, List<String>>> classToMethods;
-    HashMap<String, HashMap<String, String>> scopeToVars;
-    HashMap<String, String> inheritanceChain;
+    Map<String, Map<String, List<String>>> classToMethods;
+    Map<String, Map<String, String>> scopeToVars;
+    Map<String, String> inheritanceChain;
 
     private HashMap<String, Integer> classToVarOffset;
     private HashMap<String, Integer> classToMethodOffset; 
@@ -22,9 +22,9 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
     private List<String> argList;
 
-    public MainVisitor( HashMap<String, HashMap<String, List<String>>> classToMethods,
-                        HashMap<String, HashMap<String, String>> scopeToVars,
-                        HashMap<String, String> inheritanceChain,
+    public MainVisitor( Map<String, Map<String, List<String>>> classToMethods,
+                        Map<String, Map<String, String>> scopeToVars,
+                        Map<String, String> inheritanceChain,
                         Map<String, OffsetMaps> classToOffsetMap ) throws Exception 
     {
         super();
@@ -49,7 +49,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         if(startScope == null)
             return null;
 
-        HashMap<String, String> vars = scopeToVars.get(startScope);
+        Map<String, String> vars = scopeToVars.get(startScope);
         String varType = vars.get(varName);
         if ( varType == null)
         {
@@ -65,7 +65,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         if(startScope == null)
             return null;
 
-        HashMap<String, List<String>> methods = classToMethods.get(startScope);
+        Map<String, List<String>> methods = classToMethods.get(startScope);
         List<String> args = methods.get(methodName);
         if( args == null )
         {
@@ -233,7 +233,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             throw new Exception("Scope: " + argu + "\n\tError: Class " + type + " has not been defined.");
 
         String varName = n.f1.accept(this, argu);
-        HashMap<String, String> currScope = scopeToVars.get(argu);
+        Map<String, String> currScope = scopeToVars.get(argu);
         String seekType = currScope.get(varName);
 
         if (seekType != null) {
