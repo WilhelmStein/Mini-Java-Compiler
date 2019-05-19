@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import syntaxtree.*;
@@ -17,14 +18,14 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     private Integer currVarOffset;
     private Integer currMethodOffset;
 
-    HashMap<String, OffsetMaps> classToOffsetMap;
+    Map<String, OffsetMaps> classToOffsetMap;
 
     private List<String> argList;
 
     public MainVisitor( HashMap<String, HashMap<String, List<String>>> classToMethods,
                         HashMap<String, HashMap<String, String>> scopeToVars,
                         HashMap<String, String> inheritanceChain,
-                        HashMap<String, OffsetMaps> classToOffsetMap ) throws Exception 
+                        Map<String, OffsetMaps> classToOffsetMap ) throws Exception 
     {
         super();
         this.classToMethods = classToMethods;
