@@ -54,8 +54,6 @@ class Main {
 			boolean found_error = false;
 
 			try{
-				if(!quietMode)
-					System.out.println("Checking File: " + args[i]);
 
 				fis = new FileInputStream(args[i]);
 				MiniJavaParser parser = new MiniJavaParser(fis);
@@ -65,7 +63,7 @@ class Main {
 				root.accept(classDefVis, null);
 				root.accept(mainVis, null);
 
-				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
+				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", quietMode, classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
 				root.accept(intermediateCodeVis, null);
 				
 				//System.out.println("\n");
