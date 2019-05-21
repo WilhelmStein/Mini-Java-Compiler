@@ -1,41 +1,25 @@
 import syntaxtree.*;
-import visitor.*;
 import java.io.*;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.List;
 
 
 class OffsetMaps { // Essentially a Pair class
 
-	public HashMap<String,Integer> variableOffsets;
-	public HashMap<String,Integer> methodOffsets;
+	public Map<String,Integer> variableOffsets;
+	public Map<String,Integer> methodOffsets;
 
 	OffsetMaps()
 	{
-		this.variableOffsets = new HashMap<String,Integer>();
-		this.methodOffsets = new HashMap<String,Integer>();
+		this.variableOffsets = new LinkedHashMap<String,Integer>();
+		this.methodOffsets = new LinkedHashMap<String,Integer>();
 	}
 }
 
 class Main {
 
-	private static List<Entry<String, Integer>> sortByValues(HashMap<String, Integer> map) {
-		List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(map.entrySet());
-		// Defined Custom Comparator here
-		Collections.sort(list, new Comparator() {
-			public int compare(Object o1, Object o2) {
-				return ((Comparable) ((Map.Entry) (o1)).getValue()).compareTo(((Map.Entry) (o2)).getValue());
-			}
-		});
-
-		return list;
-   }
     public static void main (String [] args){
 
 		if(args.length == 0){
@@ -61,11 +45,11 @@ class Main {
 		
 		for(int i = j; i < args.length; i++ ) {
 
-			HashMap<String, HashMap<String, List<String>>> classToMethods = new HashMap<String, HashMap<String, List<String>>>();
-			HashMap<String, HashMap<String, String>> scopeToVars = new HashMap<String, HashMap<String, String>>();
-			HashMap<String, String> inheritanceChain = new HashMap<String, String>();
+			Map<String, Map<String, List<String>>> classToMethods = new HashMap<String, Map<String, List<String>>>();
+			Map<String, Map<String, String>> scopeToVars = new HashMap<String, Map<String, String>>();
+			Map<String, String> inheritanceChain = new HashMap<String, String>();
 
-			HashMap<String, OffsetMaps> classToOffsetMap = new HashMap<String, OffsetMaps>();
+			Map<String, OffsetMaps> classToOffsetMap = new LinkedHashMap<String, OffsetMaps>();
 
 			boolean found_error = false;
 
@@ -81,31 +65,8 @@ class Main {
 				root.accept(classDefVis, null);
 				root.accept(mainVis, null);
 
-				for (Entry<String, OffsetMaps> offsetMap : classToOffsetMap.entrySet()) {
-
-					System.out.println("-----------Class " + offsetMap.getKey() + "-----------");
-
-					System.out.println("--Variables---");
-					if(!offsetMap.getValue().variableOffsets.isEmpty())
-					{
-						List<Entry<String, Integer>> sorted = sortByValues(offsetMap.getValue().variableOffsets);
-						for(Entry<String, Integer> entry : sorted) {
-							System.out.println(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue());
-						}
-					}
-
-					System.out.println("---Methods---");
-					if(!offsetMap.getValue().methodOffsets.isEmpty())
-					{
-						
-						List<Entry<String, Integer>> sorted = sortByValues(offsetMap.getValue().methodOffsets);
-						for(Entry<String, Integer> entry : sorted) {
-							System.out.println(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue());
-						}
-						System.out.println();
-					}
-
-				}
+				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
+				root.accept(intermediateCodeVis, null);
 				
 				//System.out.println("\n");
 

@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import syntaxtree.*;
 import visitor.GJDepthFirst;
@@ -26,15 +27,15 @@ class Argument {
 
 class ClassDefVisitor extends GJDepthFirst<String, String> {
 
-    HashMap<String, HashMap<String, List<String>>> classToMethods;
-    HashMap<String, HashMap<String, String>> scopeToVars;
-    HashMap<String, String> inheritanceChain;
+    Map<String, Map<String, List<String>>> classToMethods;
+    Map<String, Map<String, String>> scopeToVars;
+    Map<String, String> inheritanceChain;
 
     private List<Argument> argList;
 
-    ClassDefVisitor(HashMap<String, HashMap<String, List<String>>> classToMethods,
-                    HashMap<String, HashMap<String, String>> scopeToVars,
-                    HashMap<String, String> inheritanceChain ) throws Exception 
+    ClassDefVisitor(Map<String, Map<String, List<String>>> classToMethods,
+                    Map<String, Map<String, String>> scopeToVars,
+                    Map<String, String> inheritanceChain ) throws Exception 
     {
         super();
         this.classToMethods = classToMethods;
@@ -51,7 +52,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         if(startScope == null)
             return null;
 
-        HashMap<String, List<String>> methods = classToMethods.get(startScope);
+        Map<String, List<String>> methods = classToMethods.get(startScope);
         List<String> args = methods.get(methodName);
         if( args == null )
         {
@@ -192,7 +193,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         String methodType = n.f1.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
 
-        HashMap<String, List<String> > classMethods = classToMethods.get(argu);
+        Map<String, List<String> > classMethods = classToMethods.get(argu);
 
         if( classMethods.containsKey(methodName) )
             throw new Exception("Redefinition Error: Method " + argu + "::" + methodName + " already defined.");
