@@ -200,7 +200,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
 
         List<String> methodData = findMethodData(methodName, argu);
 
-        HashMap<String, String> argumentsToTypes = new HashMap<String,String>();
+        Map<String, String> argumentsToTypes = new HashMap<String,String>();
 
         if( n.f4.present() )
         {
