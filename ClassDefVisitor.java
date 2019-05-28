@@ -27,13 +27,13 @@ class Argument {
 
 class ClassDefVisitor extends GJDepthFirst<String, String> {
 
-    Map<String, Map<String, List<String>>> classToMethods;
+    Map<String, Map<String, List<Argument>>> classToMethods;
     Map<String, Map<String, String>> scopeToVars;
     Map<String, String> inheritanceChain;
 
     private List<Argument> argList;
 
-    ClassDefVisitor(Map<String, Map<String, List<String>>> classToMethods,
+    ClassDefVisitor(Map<String, Map<String, List<Argument>>> classToMethods,
                     Map<String, Map<String, String>> scopeToVars,
                     Map<String, String> inheritanceChain ) throws Exception 
     {
@@ -47,13 +47,13 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
 
     // Utility functions
 
-    private List<String> findMethodData(String methodName, String startScope) {
+    private List<Argument> findMethodData(String methodName, String startScope) {
 
         if(startScope == null)
             return null;
 
-        Map<String, List<String>> methods = classToMethods.get(startScope);
-        List<String> args = methods.get(methodName);
+        Map<String, List<Argument>> methods = classToMethods.get(startScope);
+        List<Argument> args = methods.get(methodName);
         if( args == null )
         {
             String parentClass = inheritanceChain.get(startScope);
@@ -106,10 +106,10 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         if (scopeToVars.containsKey(className)) // Check if class has already been defined.
             throw new Exception("Redefinition Error: Class " + className + " already exists.");
 
-        classToMethods.put(className, new HashMap<String, List<String>>());
+        classToMethods.put(className, new HashMap<String, List<Argument>>());
         scopeToVars.put(className, new HashMap<String, String>());
 
-        classToMethods.put(className + "::main", new HashMap<String, List<String>>());
+        classToMethods.put(className + "::main", new HashMap<String, List<Argument>>());
         scopeToVars.put(className + "::main", new HashMap<String, String>());
         inheritanceChain.put(className + "::main", className);
 
@@ -131,7 +131,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         if (scopeToVars.containsKey(className))
             throw new Exception("Redefinition Error: Class " + className + " already exists.");
         
-        classToMethods.put(className, new HashMap<String, List<String>>());
+        classToMethods.put(className, new HashMap<String, List<Argument>>());
         scopeToVars.put(className, new HashMap<String, String>());
 
         if( n.f4.present() )
@@ -157,7 +157,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         if (scopeToVars.containsKey(className))
             throw new Exception("Redefinition Error: Class " + className + " already exists.");
 
-        classToMethods.put(className, new HashMap<String, List<String>>());
+        classToMethods.put(className, new HashMap<String, List<Argument>>());
         scopeToVars.put(className, new HashMap<String, String>());
 
         String parentClass = n.f3.accept(this, argu);
@@ -193,12 +193,12 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         String methodType = n.f1.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
 
-        Map<String, List<String> > classMethods = classToMethods.get(argu);
+        Map<String, List<Argument> > classMethods = classToMethods.get(argu);
 
         if( classMethods.containsKey(methodName) )
             throw new Exception("Redefinition Error: Method " + argu + "::" + methodName + " already defined.");
 
-        List<String> methodData = findMethodData(methodName, argu);
+        List<Argument> methodData = findMethodData(methodName, argu);
 
         Map<String, String> argumentsToTypes = new HashMap<String,String>();
 
@@ -208,11 +208,11 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
             List<String> typeList = Argument.typeList(argList);
             if(methodData == null)
             {
-                methodData = typeList;
-                methodData.add(0, methodType);
+                methodData = new ArrayList<Argument>(argList);
+                methodData.add(0, new Argument("", methodType));
                 classMethods.put(methodName, methodData);
             }
-            else if(methodType != methodData.get(0) || !methodData.subList(1, methodData.size()).equals(typeList))
+            else if(methodType != methodData.get(0).argumentType || !Argument.typeList(methodData.subList(1, methodData.size())).equals(typeList))
                 throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName + "");
 
             for (Argument arg : argList)
@@ -224,11 +224,11 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         {
             if(methodData == null)
             {
-                methodData = new ArrayList<String>();
-                methodData.add(0, methodType);
+                methodData = new ArrayList<Argument>();
+                methodData.add(0, new Argument("", methodType));
                 classMethods.put(methodName, methodData);
             }
-            else if(methodType != methodData.get(0) )
+            else if(methodType != methodData.get(0).argumentType )
                 throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName);
             
         }

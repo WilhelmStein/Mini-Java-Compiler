@@ -11,10 +11,16 @@ class OffsetMaps { // Essentially a Pair class
 	public Map<String,Integer> variableOffsets;
 	public Map<String,Integer> methodOffsets;
 
+	public int totalVarOffset;
+	public int totalMethodOffset;
+
 	OffsetMaps()
 	{
 		this.variableOffsets = new LinkedHashMap<String,Integer>();
 		this.methodOffsets = new LinkedHashMap<String,Integer>();
+		
+		this.totalMethodOffset = 0;
+		this.totalVarOffset = 0;
 	}
 }
 
@@ -45,7 +51,7 @@ class Main {
 		
 		for(int i = j; i < args.length; i++ ) {
 
-			Map<String, Map<String, List<String>>> classToMethods = new HashMap<String, Map<String, List<String>>>();
+			Map<String, Map<String, List<Argument>>> classToMethods = new HashMap<String, Map<String, List<Argument>>>();
 			Map<String, Map<String, String>> scopeToVars = new HashMap<String, Map<String, String>>();
 			Map<String, String> inheritanceChain = new HashMap<String, String>();
 
@@ -54,7 +60,7 @@ class Main {
 			boolean found_error = false;
 
 			try{
-
+				//System.out.println("Checking file: " + args[i]);
 				fis = new FileInputStream(args[i]);
 				MiniJavaParser parser = new MiniJavaParser(fis);
 				MainVisitor mainVis = new MainVisitor(classToMethods, scopeToVars, inheritanceChain, classToOffsetMap);

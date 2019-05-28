@@ -8,12 +8,12 @@ import visitor.GJDepthFirst;
 
 public class MainVisitor extends GJDepthFirst<String, String> {
 
-    Map<String, Map<String, List<String>>> classToMethods;
+    Map<String, Map<String, List<Argument>>> classToMethods;
     Map<String, Map<String, String>> scopeToVars;
     Map<String, String> inheritanceChain;
 
     private HashMap<String, Integer> classToVarOffset;
-    private HashMap<String, Integer> classToMethodOffset; 
+    private HashMap<String, Integer> classToMethodOffset;
 
     private Integer currVarOffset;
     private Integer currMethodOffset;
@@ -22,7 +22,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
     private List<String> argList;
 
-    public MainVisitor( Map<String, Map<String, List<String>>> classToMethods,
+    public MainVisitor( Map<String, Map<String, List<Argument>>> classToMethods,
                         Map<String, Map<String, String>> scopeToVars,
                         Map<String, String> inheritanceChain,
                         Map<String, OffsetMaps> classToOffsetMap ) throws Exception 
@@ -60,13 +60,13 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         return varType;
     }
 
-    private List<String> findMethodData(String methodName, String startScope) { // Given a method name and a scope, return it's data if it exists, otherwise return null
+    private List<Argument> findMethodData(String methodName, String startScope) { // Given a method name and a scope, return it's data if it exists, otherwise return null
 
         if(startScope == null)
             return null;
 
-        Map<String, List<String>> methods = classToMethods.get(startScope);
-        List<String> args = methods.get(methodName);
+        Map<String, List<Argument>> methods = classToMethods.get(startScope);
+        List<Argument> args = methods.get(methodName);
         if( args == null )
         {
             String parentClass = inheritanceChain.get(startScope);
@@ -247,15 +247,15 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             {
                 String currClass = argu;
 
-                classToOffsetMap.get(currClass).variableOffsets.put(varName, currVarOffset);
-                
+                OffsetMaps mp = classToOffsetMap.get(currClass);
+                mp.variableOffsets.put(varName, currVarOffset);
                 switch(type)
                 {
-                    case "int": currVarOffset += 4; break;
+                    case "int": currVarOffset += 4; mp.totalVarOffset += 4; break;
 
-                    case "boolean": currVarOffset += 1; break;
+                    case "boolean": currVarOffset += 1; mp.totalVarOffset += 1; break;
 
-                    default: currVarOffset += 8; break;
+                    default: currVarOffset += 8; mp.totalVarOffset += 8; break;
                 }
             }
         }
@@ -300,7 +300,9 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         // Check if the method declared will override another method in order to calculate the offsets correctly
         if( !overrides(methodName, argu) )
         {
-            classToOffsetMap.get(argu).methodOffsets.put(methodName, currMethodOffset);
+            OffsetMaps mp = classToOffsetMap.get(argu);
+            mp.methodOffsets.put(methodName, currMethodOffset);
+            mp.totalMethodOffset += 8;
             currMethodOffset += 8;
         }
 
@@ -568,8 +570,8 @@ public class MainVisitor extends GJDepthFirst<String, String> {
     public String visit(MessageSend n, String argu) throws Exception {
         String classType = n.f0.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
-        List<String> methodData = findMethodData(methodName, classType); // methodData have a strict format: at index 0, the return type resides and at all other indexes, the argument types are placed
-
+        List<Argument> methodData = findMethodData(methodName, classType); // methodData have a strict format: at index 0, the return type resides and at all other indexes, the argument types are placed
+        
         if(methodData == null)
             throw new Exception("Scope: " + argu + "\n\tError: Method " + methodName + " not defined in class " + classType + " or any of it's superclasses.");
         
@@ -577,18 +579,19 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         {
             n.f4.accept(this, argu);
             
-            List<String> methodArgs = methodData.subList(1, methodData.size()); // Get only the argument types and not the return type
-            if(methodArgs.size() != argList.size())
+            List<Argument> methodArgs = methodData.subList(1, methodData.size()); // Get only the argument types and not the return type
+            List<String> methodArgTypes = Argument.typeList(methodArgs);
+            if(methodArgTypes.size() != argList.size())
                 throw new Exception("Scope: " + argu + "\n\tError: No method " + argu + "::" + methodName + " with " + argList.size() + " argument(s) has been defined.");
 
-            for(int i = 0; i < methodArgs.size(); i++)
-                if( !isAncestorOf(argList.get(i), methodArgs.get(i)) ) // O(1) time complexity on List::get() due to using ArrayList
-                    throw new Exception("Scope: " + argu + "\n\tError: Method " + classType + "::" + methodName + " expects argument of type " + methodArgs.get(i) + " at argument index " + i + ".");
+            for(int i = 0; i < methodArgTypes.size(); i++)
+                if( !isAncestorOf(argList.get(i), methodArgTypes.get(i)) ) // O(1) time complexity on List::get() due to using ArrayList
+                    throw new Exception("Scope: " + argu + "\n\tError: Method " + classType + "::" + methodName + " expects argument of type " + methodArgTypes.get(i) + " at argument index " + i + ".");
             
             argList.clear();
         }
 
-        return methodData.get(0); // If all checks have been successful, then return the method return type as this expression's type
+        return methodData.get(0).argumentType; // If all checks have been successful, then return the method return type as this expression's type
     }
 
     /**
