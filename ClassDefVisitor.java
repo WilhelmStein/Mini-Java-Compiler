@@ -109,9 +109,9 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         classToMethods.put(className, new HashMap<String, List<Argument>>());
         scopeToVars.put(className, new HashMap<String, String>());
 
-        classToMethods.put(className + "::main", new HashMap<String, List<Argument>>());
-        scopeToVars.put(className + "::main", new HashMap<String, String>());
-        inheritanceChain.put(className + "::main", className);
+        classToMethods.put(className + ".main", new HashMap<String, List<Argument>>());
+        scopeToVars.put(className + ".main", new HashMap<String, String>());
+        inheritanceChain.put(className + ".main", className);
 
         return null;
     }
@@ -196,7 +196,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         Map<String, List<Argument> > classMethods = classToMethods.get(argu);
 
         if( classMethods.containsKey(methodName) )
-            throw new Exception("Redefinition Error: Method " + argu + "::" + methodName + " already defined.");
+            throw new Exception("Redefinition Error: Method " + argu + "." + methodName + " already defined.");
 
         List<Argument> methodData = findMethodData(methodName, argu);
 
@@ -213,7 +213,7 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
                 classMethods.put(methodName, methodData);
             }
             else if(methodType != methodData.get(0).argumentType || !Argument.typeList(methodData.subList(1, methodData.size())).equals(typeList))
-                throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName + "");
+                throw new Exception("Overload Error: Cannot overload function " + argu + "." + methodName + "");
 
             for (Argument arg : argList)
                 argumentsToTypes.put(arg.argumentName, arg.argumentType);
@@ -229,11 +229,11 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
                 classMethods.put(methodName, methodData);
             }
             else if(methodType != methodData.get(0).argumentType )
-                throw new Exception("Overload Error: Cannot overload function " + argu + "::" + methodName);
+                throw new Exception("Overload Error: Cannot overload function " + argu + "." + methodName);
             
         }
 
-        String currScope = argu + "::" + methodName;
+        String currScope = argu + "." + methodName;
         scopeToVars.put(currScope, argumentsToTypes);
         inheritanceChain.put(currScope, argu);
         

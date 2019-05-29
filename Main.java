@@ -69,14 +69,14 @@ class Main {
 				root.accept(classDefVis, null);
 				root.accept(mainVis, null);
 
-				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i] + ".ll", quietMode, classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
+				IntermediateCodeVisitor intermediateCodeVis = new IntermediateCodeVisitor(args[i], quietMode, classToOffsetMap, scopeToVars, inheritanceChain, classToMethods);
 				root.accept(intermediateCodeVis, null);
 				
 				//System.out.println("\n");
 
 			}
 			catch(Exception ex) {
-				System.out.println("\t" + ex.getMessage() + "\n");
+				System.out.println("Exception Encountered in file: " + args[i] + "\n\t" + ex + "\n");
 				found_error = true;
 			}
 			finally{

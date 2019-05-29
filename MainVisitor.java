@@ -146,11 +146,13 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         classToVarOffset.put(className, 0);
         classToMethodOffset.put(className, 0);
 
+        classToOffsetMap.put(className, new OffsetMaps());
+
         if(n.f14.present())
-            n.f14.accept(this, className + "::main");
+            n.f14.accept(this, className + ".main");
             
         if(n.f15.present())
-            n.f15.accept(this, className + "::main");
+            n.f15.accept(this, className + ".main");
 
         return null;
     }
@@ -243,7 +245,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             currScope.put(varName, type);
 
             // Calculate offsets if at class variable declaration scope and not inside a method
-            if(!argu.contains("::"))
+            if(!argu.contains("."))
             {
                 String currClass = argu;
 
@@ -283,7 +285,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         String methodType = n.f1.accept(this, argu);
         String methodName = n.f2.accept(this, argu);
 
-        String currScope = argu + "::" + methodName;
+        String currScope = argu + "." + methodName;
         
         if( n.f7.present() )
             n.f7.accept(this, currScope);
@@ -582,11 +584,11 @@ public class MainVisitor extends GJDepthFirst<String, String> {
             List<Argument> methodArgs = methodData.subList(1, methodData.size()); // Get only the argument types and not the return type
             List<String> methodArgTypes = Argument.typeList(methodArgs);
             if(methodArgTypes.size() != argList.size())
-                throw new Exception("Scope: " + argu + "\n\tError: No method " + argu + "::" + methodName + " with " + argList.size() + " argument(s) has been defined.");
+                throw new Exception("Scope: " + argu + "\n\tError: No method " + argu + "." + methodName + " with " + argList.size() + " argument(s) has been defined.");
 
             for(int i = 0; i < methodArgTypes.size(); i++)
-                if( !isAncestorOf(argList.get(i), methodArgTypes.get(i)) ) // O(1) time complexity on List::get() due to using ArrayList
-                    throw new Exception("Scope: " + argu + "\n\tError: Method " + classType + "::" + methodName + " expects argument of type " + methodArgTypes.get(i) + " at argument index " + i + ".");
+                if( !isAncestorOf(argList.get(i), methodArgTypes.get(i)) ) // O(1) time complexity on List.get() due to using ArrayList
+                    throw new Exception("Scope: " + argu + "\n\tError: Method " + classType + "." + methodName + " expects argument of type " + methodArgTypes.get(i) + " at argument index " + i + ".");
             
             argList.clear();
         }
@@ -673,7 +675,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ThisExpression n, String argu) throws Exception {
-        return argu.split("::", 2)[0];
+        return argu.split("\\.")[0];
     }
 
     /**

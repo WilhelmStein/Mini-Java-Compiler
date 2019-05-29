@@ -1,21 +1,19 @@
 #!/bin/bash
 make clean && make all && clear;
 
-for FILE_NAME in ./tests/*.javaa; do
-    TEMP=${FILE_NAME%.*}.offset;
-    OFFSET_FILE=./tests/offsets/${TEMP#./tests/};
-    java Main $1 "$FILE_NAME" > "$OFFSET_FILE";
-done
+for DIR_NAME in ./tests/BubbleSort; do
 
-if [ "$1" != "-q" ]; then
-    for FILE_NAME in ./tests/offset_results/*.txt; do
-        TEMP=${FILE_NAME%.*}.offset;
-        OFFSET_FILE=./tests/offsets/${TEMP#./tests/offset_results/};
-        diff "$FILE_NAME" "$OFFSET_FILE";
-    done
-fi
+    FILE_NAME=$DIR_NAME/${DIR_NAME#./tests/}.javaa;
+    java Main "$FILE_NAME";
+    
+    OFFSET_FILE=$DIR_NAME/${DIR_NAME#./tests/}.offset;
+    EXPECTED_OFFSET_FILE=$DIR_NAME/${DIR_NAME#./tests/}.txt;
 
-for FILE_NAME in ./tests/*.ll; do
-	NEW_FILENAME=./tests/llvm/${FILE_NAME#./tests/};
-	mv $FILE_NAME $NEW_FILENAME;
+    if [ -f "$EXPECTED_OFFSET_FILE" ]; then
+        diff $OFFSET_FILE $EXPECTED_OFFSET_FILE;
+        clang-4.0 -o $DIR_NAME/out.exe $DIR_NAME/${DIR_NAME#./tests/}.ll;
+        if [ "$1" == "-e" ]; then
+            $DIR_NAME/out.exe;
+        fi
+    fi
 done
