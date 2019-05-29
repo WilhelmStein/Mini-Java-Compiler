@@ -530,6 +530,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(IfStatement n, String argu) throws Exception {
+        pureEmit("\n");
         String condExprRet = n.f2.accept(this, argu);
 
         String ifEntry = "%if" + nextReg();
@@ -561,16 +562,21 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(WhileStatement n, String argu) throws Exception {
+        String aboveLoop = "%loop" + nextReg();
+
         String condExprRet = n.f2.accept(this, argu);
 
         String loopEntry = "%loop" + nextReg();
         String loopExit = "%loop" + nextReg();
-        
+
+        pureEmit("\n");
+        emit("br label " + aboveLoop + "\n" + aboveLoop + ":");
+
         emit("br i1 " + condExprRet + ", label " + loopEntry + ", label " + loopExit + "\n" + loopEntry + ":");
 
         increaseTabs();
         n.f4.accept(this, argu);
-        emit("br label " + loopExit + "\n" + loopExit + ":");
+        emit("br label " + aboveLoop + "\n" + loopExit + ":");
         decreaseTabs();
 
         return null;
