@@ -1,7 +1,7 @@
 #!/bin/bash
 make clean && make all && clear;
 
-for DIR_NAME in ./tests/BubbleSort; do
+for DIR_NAME in ./tests/*; do
 
     FILE_NAME=$DIR_NAME/${DIR_NAME#./tests/}.javaa;
     java Main "$FILE_NAME";

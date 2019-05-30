@@ -133,6 +133,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         + "declare void @exit(i32)\n\n"
         + "@_cint = constant [4 x i8] c\"%d\\0a\\00\"\n"
         + "@_cOOB = constant [15 x i8] c\"Out of bounds\\0a\\00\"\n"
+        + "@_testMsg = constant [6 x i8] c\"TEST\\0a\\00\"\n"
         + "define void @print_int(i32 %i) {\n"
         + "\t%_str = bitcast [4 x i8]* @_cint to i8*\n"
         + "\tcall i32 (i8*, ...) @printf(i8* %_str, i32 %i)\n"
@@ -142,6 +143,11 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         + "\t%_str = bitcast [15 x i8]* @_cOOB to i8*\n"
         + "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"
         + "\tcall void @exit(i32 1)\n"
+        + "\tret void\n"
+        + "}\n\n"
+        + "define void @TEST() {\n"
+        + "\t%_str = bitcast [6 x i8]* @_testMsg to i8*\n"
+        + "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"
         + "\tret void\n"
         + "}\n\n");
 
@@ -495,10 +501,21 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         String varType = findVarType(varName, argu);
         String llvmType = javaToLlvmType(varType);
 
-        String indexExprType = n.f2.accept(this, argu);
+        String indexExprReg = n.f2.accept(this, argu);
         String exprReg = n.f5.accept(this, argu);
 
-        String varReg;
+
+        String arraySizeReg = "%_" + nextReg();
+        String icmpReg = "%_" + nextReg();
+ 
+        String oobEntry = "oob" + nextReg();
+        String oobExit = "oob" + nextReg();
+
+        String arrayReg;
+        String lookupReg = "%_" + nextReg();
+
+        String lookupIndexReg = "%_" + nextReg();
+
 
         if(!scopeToVars.get(argu).containsKey(varName))
         {
@@ -508,13 +525,23 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName) + 8;
 
             emit(elementPtrReg + " = getelementptr i8, i8* %this, i32 " + varOffset);
-            emit(bitcastReg + " = bitcast i8* " + elementPtrReg + " to " + llvmType + "*");
-            varReg = bitcastReg;
+            emit(bitcastReg + " = bitcast i8* " + elementPtrReg + " to i32**");
+
+            arrayReg = "%_" + nextReg();
+            emit(arrayReg + " = load i32*, i32** " + bitcastReg);
         }
         else
-            varReg = "%" + varName;
+            arrayReg = "%" + varName;
         
-        emit("store " + llvmType  + " " + exprReg + ", " + llvmType + "* " + varReg);
+        emit(arraySizeReg + " = load i32, i32* " + arrayReg);
+        emit(icmpReg + " = icmp ult i32 " + indexExprReg + ", " + arraySizeReg);
+        emit("br i1 " + icmpReg + ", label %" + oobExit + ", label %" + oobEntry + "\n" + oobEntry + ":");
+        emit("call void @throw_oob()");
+        emit("br label %" + oobExit + "\n" + oobExit + ":");
+        emit(lookupIndexReg + " = add i32 " + indexExprReg + ", 1");
+        emit(lookupReg + " = getelementptr i32, i32* " + arrayReg + ", i32 " + lookupIndexReg);
+        // emit(lookupReg + " = getelementptr " + llvmType + ", " + llvmType + "*, i32 " + lookupIndexReg);
+        emit("store i32 " + exprReg + ", i32* " + lookupReg);
 
         return null;
     }
@@ -533,21 +560,21 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         pureEmit("\n");
         String condExprRet = n.f2.accept(this, argu);
 
-        String ifEntry = "%if" + nextReg();
-        String elseEntry = "%if" + nextReg();
-        String totalExit = "%if" + nextReg(); 
+        String ifEntry = "if" + nextReg();
+        String elseEntry = "if" + nextReg();
+        String totalExit = "if" + nextReg(); 
 
-        emit("br i1 " + condExprRet + ", label " + ifEntry + ", label " + elseEntry + "\n" + ifEntry + ":\n");
+        emit("br i1 " + condExprRet + ", label %" + ifEntry + ", label %" + elseEntry + "\n" + ifEntry + ":\n");
 
         increaseTabs();
         n.f4.accept(this, argu);
 
-        emit("br label " + totalExit + "\n" + elseEntry +":\n");
+        emit("br label %" + totalExit + "\n" + elseEntry +":\n");
         decreaseTabs();      
 
         increaseTabs();
         n.f6.accept(this, argu);
-        emit("br label " + totalExit + "\n" + totalExit +":\n");
+        emit("br label %" + totalExit + "\n" + totalExit +":\n");
         decreaseTabs();
 
         return null;
@@ -562,21 +589,21 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(WhileStatement n, String argu) throws Exception {
-        String aboveLoop = "%loop" + nextReg();
+
+        String aboveLoop = "loop" + nextReg();
+        pureEmit("\n");
+        emit("br label %" + aboveLoop + "\n" + aboveLoop + ":");
 
         String condExprRet = n.f2.accept(this, argu);
 
-        String loopEntry = "%loop" + nextReg();
-        String loopExit = "%loop" + nextReg();
+        String loopEntry = "loop" + nextReg();
+        String loopExit = "loop" + nextReg();
 
-        pureEmit("\n");
-        emit("br label " + aboveLoop + "\n" + aboveLoop + ":");
-
-        emit("br i1 " + condExprRet + ", label " + loopEntry + ", label " + loopExit + "\n" + loopEntry + ":");
+        emit("br i1 " + condExprRet + ", label %" + loopEntry + ", label %" + loopExit + "\n" + loopEntry + ":");
 
         increaseTabs();
         n.f4.accept(this, argu);
-        emit("br label " + aboveLoop + "\n" + loopExit + ":");
+        emit("br label %" + aboveLoop + "\n" + loopExit + ":");
         decreaseTabs();
 
         return null;
@@ -594,7 +621,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         String exprReg = n.f2.accept(this, argu);
 
         emit("call void (i32) @print_int(i32 " + exprReg + ")");
-
         return null;
     }
 
@@ -605,17 +631,26 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(AndExpression n, String argu) throws Exception {
+
         String clause1 = n.f0.accept(this, argu);
 
-        emit("br i1 " + clause1 + ", label %and" + (andCount++) + ", label %and" + (andCount++) + "\nand" + (andCount - 1) + ":");
+        String phiReg = "%_" + nextReg();
+        String and1 = "and" + nextReg();
+        String and2 = "and" + nextReg();
+        String and3 = "and" + nextReg();
+        String and4 = "and" + nextReg();
+
+        emit("br label %" + and1 + "\n" + and1 + ":");
+        emit("br i1 " + clause1 + ", label %" + and2 + ", label %" + and4 + "\n" + and2 + ":");
 
         String clause2 = n.f2.accept(this, argu);
 
-        emit("br label %and" + (andCount - 2) + "\nand" + (andCount - 2) + ":");
-        emit("%_" + (regCount++) + " = " + clause1);
-        emit("%_" + regCount + " = phi i1 [" + clause2 + ", %" + (andCount - 1) + "], [" + (regCount - 1) + ", %" + (andCount - 2) + "]");     
+        emit("br label %" + and3 + "\n" + and3 + ":");
+        emit("br label %" + and4 + "\n" + and4 + ":");
 
-        return "%_" + (regCount++);
+        emit(phiReg + " = phi i1 [ 0, %" + and1 + "], [" + clause2 + ", %" + and3 + "]");     
+
+        return phiReg;
     }
 
     /**
@@ -690,26 +725,24 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         String exprReg = n.f0.accept(this, argu);
         String indexReg = n.f2.accept(this, argu);
         
-        String bitcastReg = "%_" + nextReg();
         String arraySizeReg = "%_" + nextReg();
         String icmpReg = "%_" + nextReg();
 
-        String oobEntry = "%oob" + nextReg();
-        String oobExit = "%oob" + nextReg();
+        String oobEntry = "oob" + nextReg();
+        String oobExit = "oob" + nextReg();
 
         String offsetReg = "%_" + nextReg();
         String valuePtr = "%_" + nextReg();
         String valueReg = "%_" + nextReg();
 
-        emit(bitcastReg + " = bitcast i8* " + exprReg + " to i32*");
-        emit(arraySizeReg + " = load i32, " + bitcastReg);
+        emit(arraySizeReg + " = load i32, i32* " + exprReg);
         emit(icmpReg + " = icmp ult i32 " + indexReg + ", " + arraySizeReg); // Keep unsigned?
-        emit("br i1 " + icmpReg + ", label " + oobEntry + ", label " + oobExit + "\n" + oobEntry + ":");
-        emit("call i8* @throw_oob()");
-        emit("br label " + oobExit + "\n" + oobExit + ":");
+        emit("br i1 " + icmpReg + ", label %" + oobExit + ", label %" + oobEntry + "\n" + oobEntry + ":");
+        emit("call void @throw_oob()");
+        emit("br label %" + oobExit + "\n" + oobExit + ":");
         emit(offsetReg + " = add i32 1, " + indexReg);
-        emit(valuePtr + " = getelementptr i32* " + bitcastReg + ", i32 " + offsetReg);
-        emit(valueReg + " = load i32, " + valuePtr);
+        emit(valuePtr + " = getelementptr i32, i32* " + exprReg + ", i32 " + offsetReg);
+        emit(valueReg + " = load i32, i32*" + valuePtr);
         
         return valueReg;
     }
@@ -783,6 +816,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         emit("%_" + (regCount++) + " = bitcast i8* %_" + (regCount - 2) + " to " + methodDataString);
         emit("%_" + regCount + " = call " + javaToLlvmType(methodData.get(0).argumentType) + " %_" + (regCount - 1) + methodCallString);
 
+        this.metaVar = methodData.get(0).argumentType;
         return "%_" + (regCount++);
     }
 
@@ -908,13 +942,13 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         String bitcastReg = "%_" + nextReg();
         String icmpReg = "%_" + nextReg();
 
-        String oobEntry = "%arr_alloc" + nextReg();
-        String oobExit = "%arr_alloc" + nextReg();
+        String oobEntry = "arr_alloc" + nextReg();
+        String oobExit = "arr_alloc" + nextReg();
 
         emit(icmpReg + " = icmp slt i32 " + exprReg + ", 0");
-        emit("br i1 " + icmpReg + ", label " + oobEntry + ", label " + oobExit + "\n" + oobEntry + ":");
+        emit("br i1 " + icmpReg + ", label %" + oobEntry + ", label %" + oobExit + "\n" + oobEntry + ":");
         emit("call void @throw_oob()");
-        emit("br label " + oobExit + "\n" + oobExit + ":");
+        emit("br label %" + oobExit + "\n" + oobExit + ":");
         emit(sizeReg + " = add i32 1, " + exprReg);
         emit(ptrReg + " = call i8* @calloc(i32 4, i32 " + sizeReg +  ")");
         emit(bitcastReg + " = bitcast i8* " + ptrReg + " to i32*");
