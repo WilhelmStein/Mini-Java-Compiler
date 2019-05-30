@@ -531,8 +531,12 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             emit(arrayReg + " = load i32*, i32** " + bitcastReg);
         }
         else
-            arrayReg = "%" + varName;
-        
+        {
+            String arrayRegPtr = "%" + varName;
+            arrayReg = "%_" + nextReg();
+            emit(arrayReg + " = load i32*, i32** " + arrayRegPtr);
+        }
+
         emit(arraySizeReg + " = load i32, i32* " + arrayReg);
         emit(icmpReg + " = icmp ult i32 " + indexExprReg + ", " + arraySizeReg);
         emit("br i1 " + icmpReg + ", label %" + oobExit + ", label %" + oobEntry + "\n" + oobEntry + ":");
@@ -755,11 +759,11 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     @Override
     public String visit(ArrayLength n, String argu) throws Exception {
         String exprReg = n.f0.accept(this, argu);
+        String returnReg = "%_" + nextReg();
+        //perhaps bitcast?
+        emit(returnReg + " = load i32, i32* " + exprReg);
 
-        emit("%_" + (regCount++) + " = bitcast i8* " + exprReg + " to i32*");
-        emit("%_" + regCount + " = load i32, %_" + (regCount - 1));
-
-        return "%_" + (regCount++);
+        return returnReg;
     }
 
     /**
