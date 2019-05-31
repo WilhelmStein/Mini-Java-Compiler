@@ -237,6 +237,8 @@ class ClassDefVisitor extends GJDepthFirst<String, String> {
         scopeToVars.put(currScope, argumentsToTypes);
         inheritanceChain.put(currScope, argu);
         
+        classMethods.put(methodName, methodData);
+        
         return null;
     }
 

@@ -6,21 +6,35 @@ import java.util.Map;
 import java.util.List;
 
 
+class OffsetMapData {
+	Integer offset;
+	String className;
+
+	OffsetMapData(Integer offset, String className) {
+		this.offset = offset;
+		this.className = className;
+	}
+}
+
 class OffsetMaps { // Essentially a Pair class
 
-	public Map<String,Integer> variableOffsets;
-	public Map<String,Integer> methodOffsets;
+	public String className;
+
+	public Map<String,OffsetMapData> variableOffsets;
+	public Map<String,OffsetMapData> methodOffsets;
 
 	public int totalVarOffset;
 	public int totalMethodOffset;
 
-	OffsetMaps()
+	OffsetMaps(String className)
 	{
-		this.variableOffsets = new LinkedHashMap<String,Integer>();
-		this.methodOffsets = new LinkedHashMap<String,Integer>();
+		this.variableOffsets = new LinkedHashMap<String,OffsetMapData>();
+		this.methodOffsets = new LinkedHashMap<String,OffsetMapData>();
 		
 		this.totalMethodOffset = 0;
 		this.totalVarOffset = 0;
+
+		this.className = className;
 	}
 }
 

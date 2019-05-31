@@ -1,8 +1,10 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Stack;
 import java.util.Map.Entry;
 import syntaxtree.*;
@@ -21,7 +23,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     private FileOutputStream llvmFos;
     private String tabsToEmit;
     private int regCount;
-    private int andCount;
 
     private Stack<List<String>> argListStack;
 
@@ -38,7 +39,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         this.metaVar = "";
         this.tabsToEmit = "";
         this.regCount = 0;
-        this.andCount = 0;
 
         this.classToMethods = classToMethods;
         this.scopeToVars = scopeToVars;
@@ -71,6 +71,9 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         FileOutputStream offsetFos = new FileOutputStream(offsetFile);
 
         // Create Vtable
+
+        Map<String, OffsetMaps> mergedOffsetMaps = new LinkedHashMap<String, OffsetMaps>();
+
         for (Entry<String, OffsetMaps> offsetMap : classToOffsetMap.entrySet()) {
             
             pureEmit("@." + offsetMap.getKey() + "_vtable = global [");
@@ -82,23 +85,28 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
                 offsetFos.write(new String("--Variables---\n").getBytes()); 
                 if(!offsetMap.getValue().variableOffsets.isEmpty())
                 {
-                    for(Entry<String, Integer> entry : offsetMap.getValue().variableOffsets.entrySet()) {
-                        offsetFos.write(new String(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue() + "\n").getBytes());
+                    for(Entry<String, OffsetMapData> entry : offsetMap.getValue().variableOffsets.entrySet()) {
+                        offsetFos.write(new String(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue().offset + "\n").getBytes());
                     }
                 }
 
                 offsetFos.write(new String("---Methods---\n").getBytes()); 
             }
 
-            if(!offsetMap.getValue().methodOffsets.isEmpty())
+            OffsetMaps mergedMap = mergeOffsetMaps(offsetMap.getKey(), offsetMap.getKey());
+            mergedMap.totalVarOffset = offsetMap.getValue().totalVarOffset;
+            mergedMap.totalMethodOffset = offsetMap.getValue().totalMethodOffset;
+            mergedOffsetMaps.put(offsetMap.getKey(), mergedMap);
+
+            if(!mergedMap.methodOffsets.isEmpty())
             {
                 
-                pureEmit(offsetMap.getValue().methodOffsets.size() + " x i8*] [");
+                pureEmit(mergedMap.methodOffsets.size() + " x i8*] [");
                 boolean firstMethod = true;
-                for(Entry<String, Integer> entry : offsetMap.getValue().methodOffsets.entrySet()) {
+                for(Entry<String, OffsetMapData> entry : mergedMap.methodOffsets.entrySet()) {
                     
                     if(!quiet)
-                        offsetFos.write(new String(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue() + "\n").getBytes());
+                        offsetFos.write(new String(entry.getValue().className + "." + entry.getKey() + " : " + entry.getValue().offset + "\n").getBytes());
 
                     if(!firstMethod)
                         pureEmit(",\n\t");
@@ -114,7 +122,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
                         pureEmit(", " + javaToLlvmType(arg.argumentType));
                     }
 
-                    pureEmit(")* @" + offsetMap.getKey() + "." + entry.getKey() + " to i8*)");
+                    pureEmit(")* @" + entry.getValue().className + "." + entry.getKey() + " to i8*)");
 
                 }
                 pureEmit("]\n");
@@ -124,9 +132,11 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             }
             else
             {
-                pureEmit("0 x i8*] []\n");
+                pureEmit("0 x i8*] []\n\n");
             }
         }
+
+        this.classToOffsetMap = mergedOffsetMaps;
 
         pureEmit( "declare i8* @calloc(i32, i32)\n"
         + "declare i32 @printf(i8*, ...)\n"
@@ -204,6 +214,54 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         tabsToEmit = tabsToEmit.substring(0, tabsToEmit.length() - 1);
     }
 
+    private OffsetMaps mergeOffsetMaps(String className, String bottomClass) {
+        String parentClass = inheritanceChain.get(className);
+
+        if(parentClass == null)
+        {
+            OffsetMaps map = classToOffsetMap.get(className);
+            OffsetMaps out = new OffsetMaps(className);
+
+            
+            for (Map.Entry<String, OffsetMapData> variable : map.variableOffsets.entrySet()) {
+                out.variableOffsets.put(variable.getKey(), variable.getValue());
+            }
+
+            for (Map.Entry<String, OffsetMapData> method : map.methodOffsets.entrySet()) {
+                
+                OffsetMapData temp = new OffsetMapData(method.getValue().offset, method.getValue().className);
+                if(classToMethods.get(bottomClass).containsKey(method.getKey()))
+                {
+                    temp.className = bottomClass;
+                }
+
+                out.methodOffsets.put(method.getKey(), temp);
+            }
+
+            return out;
+        }
+
+        OffsetMaps output = mergeOffsetMaps(parentClass, bottomClass);
+
+        OffsetMaps map = classToOffsetMap.get(className);
+        for (Map.Entry<String, OffsetMapData> variable : map.variableOffsets.entrySet()) {
+            output.variableOffsets.put(variable.getKey(), variable.getValue());
+        }
+
+        for (Map.Entry<String, OffsetMapData> method : map.methodOffsets.entrySet()) {
+
+            OffsetMapData temp = new OffsetMapData(method.getValue().offset, method.getValue().className);
+            if(classToMethods.get(bottomClass).containsKey(method.getKey()))
+            {
+                temp.className = bottomClass;
+            }
+
+            output.methodOffsets.put(method.getKey(), temp);
+        }
+
+        return output;
+    }
+
     private List<Argument> findMethodData(String methodName, String startScope) {
 
         if(startScope == null)
@@ -234,6 +292,19 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         }
 
         return varType;
+    }
+
+    private boolean overrides(String methodName, String className) { // Check if method methodName would cause overriding if it were to be a member of class className 
+
+        String parentClass = inheritanceChain.get(className);
+
+        if(parentClass == null)
+            return false;
+
+        if(classToMethods.get(parentClass).containsKey(methodName))
+            return true;
+        else
+            return overrides(methodName, parentClass);
     }
 
 
@@ -471,7 +542,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             String elementPtrReg = "%_" + nextReg();
             String bitcastReg = "%_" + nextReg();
 
-            int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName) + 8;
+            int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName).offset + 8;
 
             emit(elementPtrReg + " = getelementptr i8, i8* %this, i32 " + varOffset);
             emit(bitcastReg + " = bitcast i8* " + elementPtrReg + " to " + llvmType + "*");
@@ -498,8 +569,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     public String visit(ArrayAssignmentStatement n, String argu) throws Exception {
 
         String varName = n.f0.accept(this, argu);
-        String varType = findVarType(varName, argu);
-        String llvmType = javaToLlvmType(varType);
 
         String indexExprReg = n.f2.accept(this, argu);
         String exprReg = n.f5.accept(this, argu);
@@ -522,7 +591,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             String elementPtrReg = "%_" + nextReg();
             String bitcastReg = "%_" + nextReg();
 
-            int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName) + 8;
+            int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName).offset + 8;
 
             emit(elementPtrReg + " = getelementptr i8, i8* %this, i32 " + varOffset);
             emit(bitcastReg + " = bitcast i8* " + elementPtrReg + " to i32**");
@@ -789,7 +858,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         emit("; Calling " + className + "." + methodName);
 
         List<Argument> methodData = findMethodData(methodName, className);
-        Integer methodOffset = classToOffsetMap.get(className).methodOffsets.get(methodName);
+        Integer methodOffset = classToOffsetMap.get(className).methodOffsets.get(methodName).offset;
 
         String methodDataString = javaToLlvmType(methodData.get(0).argumentType) + " (i8*";
         String methodCallString = "(i8* " + exprReg;
@@ -869,7 +938,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
                 String elementPtrReg = "%_" + nextReg();
                 String bitcastReg = "%_" + nextReg();
 
-                int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName) + 8;
+                int varOffset = classToOffsetMap.get(argu.split("\\.")[0]).variableOffsets.get(varName).offset + 8;
 
                 emit(elementPtrReg + " = getelementptr i8, i8* %this, i32 " + varOffset);
                 emit(bitcastReg + " = bitcast i8* " + elementPtrReg + " to " + llvmType + "*");

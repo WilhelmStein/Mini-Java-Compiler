@@ -146,7 +146,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         classToVarOffset.put(className, 0);
         classToMethodOffset.put(className, 0);
 
-        classToOffsetMap.put(className, new OffsetMaps());
+        classToOffsetMap.put(className, new OffsetMaps(className));
 
         if(n.f14.present())
             n.f14.accept(this, className + ".main");
@@ -174,7 +174,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         currVarOffset = 0;
         currMethodOffset = 0;
 
-        classToOffsetMap.put(className, new OffsetMaps());
+        classToOffsetMap.put(className, new OffsetMaps(className));
 
         if( n.f3.present() )
             n.f3.accept(this, className);
@@ -206,7 +206,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         int currVarOffset = classToVarOffset.get(parentClass);
         int currMethodOffset = classToMethodOffset.get(parentClass);
 
-        classToOffsetMap.put(className, new OffsetMaps());
+        classToOffsetMap.put(className, new OffsetMaps(className));
 
         if( n.f5.present() )
             n.f5.accept(this, className);
@@ -250,7 +250,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
                 String currClass = argu;
 
                 OffsetMaps mp = classToOffsetMap.get(currClass);
-                mp.variableOffsets.put(varName, currVarOffset);
+                mp.variableOffsets.put(varName, new OffsetMapData(currVarOffset, argu.split("\\.")[0]));
                 switch(type)
                 {
                     case "int": currVarOffset += 4; mp.totalVarOffset += 4; break;
@@ -303,7 +303,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         if( !overrides(methodName, argu) )
         {
             OffsetMaps mp = classToOffsetMap.get(argu);
-            mp.methodOffsets.put(methodName, currMethodOffset);
+            mp.methodOffsets.put(methodName, new OffsetMapData(currMethodOffset, argu.split("\\.")[0]));
             mp.totalMethodOffset += 8;
             currMethodOffset += 8;
         }
