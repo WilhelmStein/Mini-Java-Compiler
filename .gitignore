@@ -10,3 +10,8 @@
 !ClassDefVisitor.java
 !IntermediateCodeVisitor.java
 !buildAndTest.sh
+!/tests/
+!/tests/*
+!/tests/*/*
+!javacc5.jar
+!jtb123di.jar

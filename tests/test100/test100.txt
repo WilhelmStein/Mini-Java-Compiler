@@ -1,0 +1,8 @@
+-----------Class test100-----------
+--Variables---
+---Methods---
+-----------Class Boink-----------
+--Variables---
+---Methods---
+Boink.boah : 0
+

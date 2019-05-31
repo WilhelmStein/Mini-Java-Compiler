@@ -1,0 +1,11 @@
+class test100 {
+    public static void main(String[] args) {
+        System.out.println(new Boink().boah(new Boink().boah(15)));
+    }
+}
+
+class Boink {
+    public int boah(int b) {
+        return b;
+    }
+}
