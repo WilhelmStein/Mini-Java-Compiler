@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Stack;
 import java.util.Map.Entry;
 import syntaxtree.*;
@@ -17,7 +16,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     Map<String, String> inheritanceChain;
     Map<String, OffsetMaps> classToOffsetMap;
 
-    final boolean quiet;
     private String metaVar;
 
     private FileOutputStream llvmFos;
@@ -27,7 +25,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     private Stack<List<String>> argListStack;
 
     public IntermediateCodeVisitor( String fileName,
-                                    boolean quiet,
                                     Map<String, OffsetMaps> classToOffsetMap,
                                     Map<String, Map<String, String>> scopeToVars,
                                     Map<String, String> inheritanceChain,
@@ -35,7 +32,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
     {
         super();
 
-        this.quiet = quiet;
         this.metaVar = "";
         this.tabsToEmit = "";
         this.regCount = 0;
@@ -48,27 +44,20 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         this.argListStack = new Stack<List<String>>();
 
         String llvmFileName;
-        String offsetFileName;
 
         if(fileName.endsWith(".javaa") || fileName.endsWith(".java"))
         {
             String baseFile = fileName.substring(0, fileName.lastIndexOf("."));
             llvmFileName = baseFile + ".ll";
-            offsetFileName = baseFile + ".offset";
         }
         else
         {
             llvmFileName = fileName + ".ll";
-            offsetFileName = fileName + ".offset";
         }
 
         // Open llvm output file
         File llvmFile = new File(llvmFileName);
         llvmFos = new FileOutputStream(llvmFile);
-
-        // Open offset output file
-        File offsetFile = new File(offsetFileName);
-        FileOutputStream offsetFos = new FileOutputStream(offsetFile);
 
         // Create Vtable
 
@@ -78,20 +67,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
             
             pureEmit("@." + offsetMap.getKey() + "_vtable = global [");
 
-            if(!quiet)
-            {
-                offsetFos.write(new String("-----------Class " + offsetMap.getKey() + "-----------\n").getBytes());
-
-                offsetFos.write(new String("--Variables---\n").getBytes()); 
-                if(!offsetMap.getValue().variableOffsets.isEmpty())
-                {
-                    for(Entry<String, OffsetMapData> entry : offsetMap.getValue().variableOffsets.entrySet()) {
-                        offsetFos.write(new String(offsetMap.getKey() + "." + entry.getKey() + " : " + entry.getValue().offset + "\n").getBytes());
-                    }
-                }
-
-                offsetFos.write(new String("---Methods---\n").getBytes()); 
-            }
 
             OffsetMaps mergedMap = mergeOffsetMaps(offsetMap.getKey(), offsetMap.getKey());
             mergedMap.totalVarOffset = offsetMap.getValue().totalVarOffset;
@@ -105,8 +80,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
                 boolean firstMethod = true;
                 for(Entry<String, OffsetMapData> entry : mergedMap.methodOffsets.entrySet()) {
                     
-                    if(!quiet)
-                        offsetFos.write(new String(entry.getValue().className + "." + entry.getKey() + " : " + entry.getValue().offset + "\n").getBytes());
 
                     if(!firstMethod)
                         pureEmit(",\n\t");
@@ -127,8 +100,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
                 }
                 pureEmit("]\n");
 
-                if(!quiet)
-                    offsetFos.write(new String("\n").getBytes());
             }
             else
             {
@@ -160,11 +131,7 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
         + "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"
         + "\tret void\n"
         + "}\n\n");
-
-        // if(!quiet)
-        //     offsetFos.write(new String("\n").getBytes());
         
-        offsetFos.close();
     }
 
     // Utility Functions
@@ -293,20 +260,6 @@ public class IntermediateCodeVisitor extends GJDepthFirst<String, String> {
 
         return varType;
     }
-
-    private boolean overrides(String methodName, String className) { // Check if method methodName would cause overriding if it were to be a member of class className 
-
-        String parentClass = inheritanceChain.get(className);
-
-        if(parentClass == null)
-            return false;
-
-        if(classToMethods.get(parentClass).containsKey(methodName))
-            return true;
-        else
-            return overrides(methodName, parentClass);
-    }
-
 
     // Visit functions
 

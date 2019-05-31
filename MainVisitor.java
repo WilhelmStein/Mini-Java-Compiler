@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Stack;
 import java.util.HashMap;
 import java.util.List;
 import syntaxtree.*;
@@ -20,7 +21,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
 
     Map<String, OffsetMaps> classToOffsetMap;
 
-    private List<String> argList;
+    private Stack<List<String>> argListStack;
 
     public MainVisitor( Map<String, Map<String, List<Argument>>> classToMethods,
                         Map<String, Map<String, String>> scopeToVars,
@@ -39,7 +40,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         this.currMethodOffset = 0;
         this.currVarOffset = 0;
 
-        this.argList = new ArrayList<String>();
+        this.argListStack = new Stack<List<String>>();
     }
 
     // Utility Functions
@@ -580,9 +581,10 @@ public class MainVisitor extends GJDepthFirst<String, String> {
         if( n.f4.present() )
         {
             n.f4.accept(this, argu);
-            
+            List<String> argList = argListStack.peek();
             List<Argument> methodArgs = methodData.subList(1, methodData.size()); // Get only the argument types and not the return type
             List<String> methodArgTypes = Argument.typeList(methodArgs);
+
             if(methodArgTypes.size() != argList.size())
                 throw new Exception("Scope: " + argu + "\n\tError: No method " + argu + "." + methodName + " with " + argList.size() + " argument(s) has been defined.");
 
@@ -590,7 +592,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
                 if( !isAncestorOf(argList.get(i), methodArgTypes.get(i)) ) // O(1) time complexity on List.get() due to using ArrayList
                     throw new Exception("Scope: " + argu + "\n\tError: Method " + classType + "." + methodName + " expects argument of type " + methodArgTypes.get(i) + " at argument index " + i + ".");
             
-            argList.clear();
+            argListStack.pop();
         }
 
         return methodData.get(0).argumentType; // If all checks have been successful, then return the method return type as this expression's type
@@ -602,7 +604,8 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ExpressionList n, String argu) throws Exception {
-        argList.add(n.f0.accept(this, argu));
+        argListStack.add(new ArrayList<String>());
+        argListStack.peek().add(n.f0.accept(this, argu));
         n.f1.accept(this, argu);
         return null;
     }
@@ -613,7 +616,7 @@ public class MainVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(ExpressionTerm n, String argu) throws Exception {
-        argList.add(n.f1.accept(this, argu));
+        argListStack.peek().add(n.f1.accept(this, argu));
         return null;
     }
 
