@@ -13,5 +13,5 @@
 !/tests/
 !/tests/*
 !/tests/*/*
-!javacc5.jar
-!jtb123di.jar
+!/javacc5.jar
+!/jtb132di.jar
